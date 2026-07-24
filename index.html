@@ -10257,7 +10257,7 @@ Current version indicated by LITEVER below.
 
 			load_selected_file(selectedFile, to_groupchat);
 
-			document.getElementById("loadfileinput").value = "";
+			input.value = "";
 		} else {
 			console.log("No file to load")
 		}
@@ -10299,6 +10299,10 @@ Current version indicated by LITEVER below.
 					else if(new_loaded_storyobj.md && new_loaded_storyobj.savedsettings) //add some compat loading for sharefiles
 					{
 						kai_json_load(new_loaded_storyobj,false, false, true, to_groupchat);
+					}
+					else if(to_groupchat)
+					{
+						msgbox("Could not import selected file as a group chat participant. Please select a KoboldAI save, Tavern character card, Risu card, or compatible Ooba character file.");
 					}
 					else if(new_loaded_storyobj.scenarioVersion>1 && new_loaded_storyobj.scenarioVersion<10)
 					{
@@ -10354,6 +10358,12 @@ Current version indicated by LITEVER below.
 						}
 					} catch (error) {
 						console.log("Unzip failed: " + error);
+					}
+
+					if(to_groupchat)
+					{
+						msgbox("Could not import selected file as a group chat participant. Please select a KoboldAI save, Tavern character card, Risu card, or compatible Ooba character file.");
+						return;
 					}
 
 					//try JSONL
@@ -10425,10 +10435,13 @@ Current version indicated by LITEVER below.
 	{
 		if(to_groupchat)
 		{
-			let chatopponent = storyobj.savedsettings.chatopponent?storyobj.savedsettings.chatopponent:defaultchatopponent;
+			let savedsettings = storyobj.savedsettings || {};
+			let savedaestheticsettings = storyobj.savedaestheticsettings || {};
+			let chatopponent = savedsettings.chatopponent?String(savedsettings.chatopponent).split("||$||")[0]:defaultchatopponent;
 			let memory = storyobj.memory?storyobj.memory:"";
 			memory = replaceAll(memory,"{{char}}",chatopponent,true);
-			add_another_participant_from_file({name:chatopponent,ctx_memory:memory,portrait:storyobj.savedaestheticsettings.AI_portrait});
+			let portrait = (savedaestheticsettings.AI_portrait && savedaestheticsettings.AI_portrait!="default") ? savedaestheticsettings.AI_portrait : null;
+			add_another_participant_from_file({name:chatopponent,ctx_memory:memory,portrait:portrait});
 			return;
 		}
 		//either show popup or just proceed to load
@@ -28414,10 +28427,14 @@ Current version indicated by LITEVER below.
 				compressImage(obj.portrait, (compressedImageURI, aspectratio) => {
 					bot_data.portrait = compressedImageURI;
 					bot_data.portrait_ratio = aspectratio.toFixed(2);
-					set_groupchat_bot_meta(name, bot_data);						
+					set_groupchat_bot_meta(name, bot_data);
+					show_groupchat_select();
 				}, true, AVATAR_PX);
 			}
-			setTimeout(()=>{show_groupchat_select();},50); //give the portrait avatar some time to render
+			else
+			{
+				show_groupchat_select();
+			}
 		}
 	}
 	function confirm_groupchat_select()
